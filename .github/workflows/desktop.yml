@@ -29,24 +29,25 @@ jobs:
             target: linux
             arch: x64
             artifact_name: linux-x64
+            # Fastforge writes under dist/<version>/; MSI is written to dist/.
             package_globs: |
-              dist/*.deb
-              dist/*.rpm
+              dist/**/*.deb
+              dist/**/*.rpm
 
           - os: windows-latest
             target: windows
             arch: x64
             artifact_name: windows-x64
             package_globs: |
-              dist/*.exe
-              dist/*.msi
+              dist/**/*.exe
+              dist/**/*.msi
 
           - os: macos-latest
             target: macos
             arch: arm64
             artifact_name: macos-arm64
             package_globs: |
-              dist/*.dmg
+              dist/**/*.dmg
 
     steps:
       - name: Checkout
@@ -164,7 +165,10 @@ jobs:
 
       - name: Install appdmg
         if: matrix.target == 'macos'
-        run: npm install -g appdmg
+        run: |
+          npm install -g appdmg
+          command -v appdmg
+          appdmg --version || true
 
       - name: Package macOS (dmg)
         if: matrix.target == 'macos'
@@ -173,15 +177,18 @@ jobs:
           set -euo pipefail
           export PATH="$PATH:$HOME/.pub-cache/bin"
           fastforge package --platform macos --targets dmg
-          ls -lah dist/
+          echo "Packaged files:"
+          find dist -type f -print
+          test -n "$(find dist -type f -name '*.dmg' | head -n 1)"
 
       - name: Upload installers
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: space_weather-${{ matrix.artifact_name }}
           path: ${{ matrix.package_globs }}
           if-no-files-found: error
           retention-days: 14
+          compression-level: 0
 
       - name: Publish / attach to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release'
