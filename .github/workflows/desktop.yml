@@ -104,6 +104,18 @@ jobs:
         run: |
           set -euo pipefail
           export PATH="$PATH:$HOME/.pub-cache/bin"
+
+          # MakeDebConfig requires installed_size (KiB); sync from the release bundle.
+          SIZE_KB="$(du -sk build/linux/x64/release/bundle | cut -f1)"
+          if grep -q '^installed_size:' linux/packaging/deb/make_config.yaml; then
+            sed -i "s/^installed_size:.*/installed_size: ${SIZE_KB}/" \
+              linux/packaging/deb/make_config.yaml
+          else
+            printf '\ninstalled_size: %s\n' "${SIZE_KB}" \
+              >> linux/packaging/deb/make_config.yaml
+          fi
+          echo "deb installed_size=${SIZE_KB} KiB"
+
           fastforge package --platform linux --targets deb
           fastforge package --platform linux --targets rpm
           ls -lah dist/

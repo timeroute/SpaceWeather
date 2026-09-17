@@ -5,6 +5,8 @@ maintainer:
   email: space-weather@example.com
 priority: optional
 section: science
+# Approximate installed size in KiB (CI overwrites from the built bundle).
+installed_size: 50000
 essential: false
 icon: assets/branding/app_icon.png
 
