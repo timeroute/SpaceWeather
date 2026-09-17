@@ -26,14 +26,18 @@ Workflow: [`.github/workflows/desktop.yml`](.github/workflows/desktop.yml)
 
 | Trigger | Behavior |
 |---------|----------|
-| Push / PR to `main` | Matrix build **Linux + Windows**, upload artifacts |
+| Push / PR to `main` | Matrix build, upload artifacts |
 | Published Release | Same builds, attach packages to the Release |
 | Manual (`workflow_dispatch`) | Same as push |
 
-Artifacts:
+| Target | Runner | Artifact |
+|--------|--------|----------|
+| Linux x64 | `ubuntu-22.04` | `space_weather-<ver>-linux-x64.tar.gz` |
+| Windows x64 | `windows-latest` | `space_weather-<ver>-windows-x64.zip` |
+| macOS Apple Silicon | `macos-latest` (arm64) | `space_weather-<ver>-macos-arm64.zip` |
+| macOS Intel | `macos-15-intel` (x86_64) | `space_weather-<ver>-macos-x86_64.zip` |
 
-- Linux: `space_weather-<version>-linux-x64.tar.gz`
-- Windows: `space_weather-<version>-windows-x64.zip`
+> Note: GitHub plans to retire Intel macOS runners after macOS 15 (~Fall 2027). Prefer `macos-arm64` for new machines.
 
 Release example:
 
