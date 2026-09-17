@@ -1,0 +1,12 @@
+# Uniquely identifies this application. Do not reuse for other apps.
+app_id: 241F8962-422F-4709-B41A-C8E083257FED
+publisher: timeroute
+publisher_url: https://github.com/timeroute/SpaceWeather
+display_name: 空间天气
+create_desktop_icon: true
+setup_icon_file: windows/runner/resources/app_icon.ico
+locales:
+  - en
+  - zh
+architectures_allowed: x64compatible
+architectures_install_in_64bit_mode: x64compatible

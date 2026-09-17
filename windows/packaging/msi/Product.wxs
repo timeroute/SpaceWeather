@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Classic Windows Installer (.msi) package for Space Weather.
+  File inventory is harvested at build time from the Flutter Release folder.
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product
+      Id="*"
+      Name="Space Weather"
+      Language="1033"
+      Version="$(var.ProductVersion)"
+      Manufacturer="timeroute"
+      UpgradeCode="241F8962-422F-4709-B41A-C8E083257FED">
+    <Package
+        InstallerVersion="500"
+        Compressed="yes"
+        InstallScope="perMachine"
+        Description="Space Weather Situational Awareness"
+        Manufacturer="timeroute" />
+
+    <MajorUpgrade
+        DowngradeErrorMessage="A newer version of Space Weather is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="AppIcon.ico" SourceFile="$(var.ProjectDir)\windows\runner\resources\app_icon.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon.ico" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/timeroute/SpaceWeather" />
+
+    <Feature Id="MainFeature" Title="Space Weather" Level="1">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="ApplicationShortcut" />
+    </Feature>
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="SpaceWeather" />
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="Space Weather" />
+      </Directory>
+    </Directory>
+
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="ApplicationShortcut" Guid="A7C3E91F-5B24-4D6A-9E18-0F4C2B8D71A3">
+        <Shortcut
+            Id="ApplicationStartMenuShortcut"
+            Name="Space Weather"
+            Description="Space Weather Situational Awareness"
+            Target="[INSTALLFOLDER]space_weather.exe"
+            WorkingDirectory="INSTALLFOLDER"
+            Icon="AppIcon.ico" />
+        <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall" />
+        <RegistryValue
+            Root="HKCU"
+            Key="Software\timeroute\SpaceWeather"
+            Name="installed"
+            Type="integer"
+            Value="1"
+            KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+  </Product>
+</Wix>

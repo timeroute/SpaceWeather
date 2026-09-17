@@ -1,0 +1,22 @@
+display_name: 空间天气
+package_name: space-weather
+maintainer:
+  name: timeroute
+  email: space-weather@example.com
+priority: optional
+section: science
+essential: false
+icon: assets/branding/app_icon.png
+
+keywords:
+  - Space Weather
+  - NOAA
+  - SDO
+  - Astronomy
+
+generic_name: Space Weather
+categories:
+  - Science
+  - Education
+
+startup_notify: true

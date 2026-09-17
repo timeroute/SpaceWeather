@@ -1,0 +1,23 @@
+icon: assets/branding/app_icon.png
+summary: Space Weather Situational Awareness
+group: Applications/Science
+vendor: timeroute
+packager: timeroute
+packager_email: space-weather@example.com
+license: MIT
+url: https://github.com/timeroute/SpaceWeather
+
+display_name: 空间天气
+
+keywords:
+  - Space Weather
+  - NOAA
+  - SDO
+  - Astronomy
+
+generic_name: Space Weather
+categories:
+  - Science
+  - Education
+
+startup_notify: true

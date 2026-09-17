@@ -29,19 +29,24 @@ jobs:
             target: linux
             arch: x64
             artifact_name: linux-x64
-            artifact_path: build/linux/x64/release/bundle
+            package_globs: |
+              dist/*.deb
+              dist/*.rpm
 
           - os: windows-latest
             target: windows
             arch: x64
             artifact_name: windows-x64
-            artifact_path: build/windows/x64/runner/Release
+            package_globs: |
+              dist/*.exe
+              dist/*.msi
 
           - os: macos-latest
             target: macos
             arch: arm64
             artifact_name: macos-arm64
-            artifact_path: build/macos/Build/Products/Release/space_weather.app
+            package_globs: |
+              dist/*.dmg
 
     steps:
       - name: Checkout
@@ -53,7 +58,8 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y \
             clang cmake ninja-build pkg-config \
-            libgtk-3-dev liblzma-dev libstdc++-12-dev
+            libgtk-3-dev liblzma-dev libstdc++-12-dev \
+            rpm patchelf dpkg-dev
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -83,62 +89,85 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          BIN="${{ matrix.artifact_path }}/Contents/MacOS/space_weather"
+          BIN="build/macos/Build/Products/Release/space_weather.app/Contents/MacOS/space_weather"
           file "$BIN"
           ARCHS="$(lipo -archs "$BIN")"
           echo "lipo archs: $ARCHS"
-          case "${{ matrix.arch }}" in
-            arm64)
-              echo "$ARCHS" | grep -qw arm64
-              ;;
-            *)
-              echo "Unknown arch ${{ matrix.arch }}" >&2
-              exit 1
-              ;;
-          esac
+          echo "$ARCHS" | grep -qw arm64
 
-      - name: Package artifact (Linux)
+      - name: Install Fastforge
+        run: dart pub global activate fastforge
+
+      - name: Package Linux (deb + rpm)
         if: matrix.target == 'linux'
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="$(grep '^version:' pubspec.yaml | sed 's/version:[[:space:]]*//;s/+.*//')"
-          OUT="space_weather-${VERSION}-${{ matrix.artifact_name }}"
-          mkdir -p dist
-          cp -a "${{ matrix.artifact_path }}" "dist/${OUT}"
-          (cd dist && tar -czf "${OUT}.tar.gz" "${OUT}")
-          echo "ASSET_PATH=dist/${OUT}.tar.gz" >> "$GITHUB_ENV"
+          export PATH="$PATH:$HOME/.pub-cache/bin"
+          fastforge package --platform linux --targets deb
+          fastforge package --platform linux --targets rpm
+          ls -lah dist/
 
-      - name: Package artifact (Windows)
+      - name: Install Windows packaging tools
         if: matrix.target == 'windows'
         shell: pwsh
         run: |
+          choco install innosetup wixtoolset --no-progress -y
+          # Ensure WiX bin is on PATH for this job
+          $wixRoots = @(
+            "${env:ProgramFiles(x86)}\WiX Toolset v3.14\bin",
+            "${env:ProgramFiles(x86)}\WiX Toolset v3.11\bin",
+            "${env:ProgramFiles}\WiX Toolset v3.14\bin"
+          )
+          foreach ($root in $wixRoots) {
+            if (Test-Path $root) {
+              echo $root | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+              break
+            }
+          }
+
+      - name: Package Windows (exe + msi)
+        if: matrix.target == 'windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $env:Path = "$env:Path;$env:USERPROFILE\.pub-cache\bin;$env:LOCALAPPDATA\Pub\Cache\bin"
+
+          fastforge package --platform windows --targets exe
+
           $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$').Matches.Groups[1].Value
           $version = $version.Split('+')[0]
-          $out = "space_weather-$version-${{ matrix.artifact_name }}"
-          New-Item -ItemType Directory -Force -Path dist | Out-Null
-          Copy-Item -Recurse -Force "${{ matrix.artifact_path }}" "dist/$out"
-          Compress-Archive -Path "dist/$out\*" -DestinationPath "dist/$out.zip" -Force
-          "ASSET_PATH=dist/$out.zip" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          $projectDir = (Resolve-Path .).Path
+          $sourceDir = Join-Path $projectDir "build\windows\x64\runner\Release"
+          $outDir = Join-Path $projectDir "dist"
 
-      - name: Package artifact (macOS)
+          & powershell -NoProfile -ExecutionPolicy Bypass `
+            -File "windows\packaging\msi\pack.ps1" `
+            -Version $version `
+            -SourceDir $sourceDir `
+            -OutDir $outDir `
+            -ProjectDir $projectDir
+
+          Get-ChildItem dist | Format-Table Name, Length
+
+      - name: Install appdmg
+        if: matrix.target == 'macos'
+        run: npm install -g appdmg
+
+      - name: Package macOS (dmg)
         if: matrix.target == 'macos'
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="$(grep '^version:' pubspec.yaml | sed 's/version:[[:space:]]*//;s/+.*//')"
-          OUT="space_weather-${VERSION}-${{ matrix.artifact_name }}"
-          mkdir -p dist
-          ditto -c -k --sequesterRsrc --keepParent \
-            "${{ matrix.artifact_path }}" \
-            "dist/${OUT}.zip"
-          echo "ASSET_PATH=dist/${OUT}.zip" >> "$GITHUB_ENV"
+          export PATH="$PATH:$HOME/.pub-cache/bin"
+          fastforge package --platform macos --targets dmg
+          ls -lah dist/
 
-      - name: Upload build artifact
+      - name: Upload installers
         uses: actions/upload-artifact@v4
         with:
           name: space_weather-${{ matrix.artifact_name }}
-          path: ${{ env.ASSET_PATH }}
+          path: ${{ matrix.package_globs }}
           if-no-files-found: error
           retention-days: 14
 
@@ -146,7 +175,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.ASSET_PATH }}
+          files: ${{ matrix.package_globs }}
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
