@@ -26,9 +26,10 @@ Workflow: [`.github/workflows/desktop.yml`](.github/workflows/desktop.yml)
 
 | Trigger | Behavior |
 |---------|----------|
-| Push / PR to `main` | Matrix build, upload artifacts |
-| Published Release | Same builds, attach packages to the Release |
-| Manual (`workflow_dispatch`) | Same as push |
+| Push / PR to `main` | Matrix build → **Actions Artifacts**（不在 Release 页） |
+| Push tag `v*` | Build → **自动创建/更新 Release** 并挂上安装包 |
+| Published Release | Build → 附件挂到该 Release |
+| Manual (`workflow_dispatch`) | 同 push to main |
 
 | Target | Runner | Artifact |
 |--------|--------|----------|
@@ -37,12 +38,21 @@ Workflow: [`.github/workflows/desktop.yml`](.github/workflows/desktop.yml)
 | macOS Apple Silicon | `macos-latest` (arm64) | `space_weather-<ver>-macos-arm64.zip` |
 | macOS Intel | `macos-15-intel` (x86_64) | `space_weather-<ver>-macos-x86_64.zip` |
 
-> Note: GitHub plans to retire Intel macOS runners after macOS 15 (~Fall 2027). Prefer `macos-arm64` for new machines.
+### 如何在 Release 页面看到编译产物
 
-Release example:
+推荐方式（打 tag 自动发布）：
 
 ```bash
+git push origin main
 git tag v1.0.0
 git push origin v1.0.0
-# Publish a GitHub Release for that tag — CI attaches the builds
 ```
+
+然后打开 **GitHub → Releases → v1.0.0**。  
+等 Actions 全部变绿后，Release 的 **Assets** 里会出现 4 个平台安装包。
+
+备选：在 GitHub 上 **Releases → Draft a new release → Publish**，Actions 跑完后附件会自动挂上。
+
+> 只 push 到 `main` 时，产物在 **Actions → 某次 run → Artifacts**，不会出现在 Release 页。
+
+> Intel macOS runner 计划随 macOS 15 在 ~2027 退役，新机器优先用 `macos-arm64`。

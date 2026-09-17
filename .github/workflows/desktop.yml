@@ -3,6 +3,7 @@ name: Desktop Build
 on:
   push:
     branches: [main, master]
+    tags: ['v*']
   pull_request:
     branches: [main, master]
   release:
@@ -12,6 +13,9 @@ on:
 concurrency:
   group: desktop-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -33,14 +37,12 @@ jobs:
             artifact_name: windows-x64
             artifact_path: build/windows/x64/runner/Release
 
-          # Apple Silicon (arm64)
           - os: macos-latest
             target: macos
             arch: arm64
             artifact_name: macos-arm64
             artifact_path: build/macos/Build/Products/Release/space_weather.app
 
-          # Intel (x86_64) — available until macOS 15 Intel runners retire (~Fall 2027)
           - os: macos-15-intel
             target: macos
             arch: x86_64
@@ -136,7 +138,6 @@ jobs:
           VERSION="$(grep '^version:' pubspec.yaml | sed 's/version:[[:space:]]*//;s/+.*//')"
           OUT="space_weather-${VERSION}-${{ matrix.artifact_name }}"
           mkdir -p dist
-          # ditto preserves .app bundle metadata better than zip alone
           ditto -c -k --sequesterRsrc --keepParent \
             "${{ matrix.artifact_path }}" \
             "dist/${OUT}.zip"
@@ -150,10 +151,13 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Attach to GitHub Release
-        if: github.event_name == 'release'
+      - name: Publish / attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ env.ASSET_PATH }}
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
