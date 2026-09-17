@@ -1,0 +1,38 @@
+# Generate with: dart run flutter_launcher_icons
+#
+# Platform coverage:
+# - android / ios: enabled below (boolean flags)
+# - web / windows / macos: nested generate blocks
+# - linux: NOT supported by this package (see linux/runner/my_application.cc)
+
+flutter_launcher_icons:
+  image_path: assets/branding/app_icon.png
+
+  # Android (mipmap-*)
+  android: true
+  min_sdk_android: 21
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: assets/branding/app_icon.png
+
+  # iOS (AppIcon.appiconset)
+  ios: true
+  remove_alpha_ios: true
+  background_color_ios: "#000000"
+
+  # Web (web/icons + favicon)
+  web:
+    generate: true
+    image_path: assets/branding/app_icon.png
+    background_color: "#000000"
+    theme_color: "#0D47A1"
+
+  # Windows (runner/resources/app_icon.ico)
+  windows:
+    generate: true
+    image_path: assets/branding/app_icon.png
+    icon_size: 256
+
+  # macOS (AppIcon.appiconset)
+  macos:
+    generate: true
+    image_path: assets/branding/app_icon.png
