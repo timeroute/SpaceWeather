@@ -1,0 +1,107 @@
+name: Desktop Build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: desktop-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: linux
+            artifact_path: build/linux/x64/release/bundle
+          - os: windows-latest
+            target: windows
+            artifact_path: build/windows/x64/runner/Release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux desktop dependencies
+        if: matrix.target == 'linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Enable desktop target
+        run: flutter config --enable-${{ matrix.target }}-desktop
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Test
+        run: flutter test
+
+      - name: Build release
+        run: flutter build ${{ matrix.target }} --release
+
+      - name: Package artifact (Linux)
+        if: matrix.target == 'linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(grep '^version:' pubspec.yaml | sed 's/version:[[:space:]]*//;s/+.*//')"
+          OUT="space_weather-${VERSION}-linux-x64"
+          mkdir -p dist
+          cp -a "${{ matrix.artifact_path }}" "dist/${OUT}"
+          (
+            cd dist
+            tar -czf "${OUT}.tar.gz" "${OUT}"
+          )
+          echo "ASSET_NAME=${OUT}.tar.gz" >> "$GITHUB_ENV"
+          echo "ASSET_PATH=dist/${OUT}.tar.gz" >> "$GITHUB_ENV"
+
+      - name: Package artifact (Windows)
+        if: matrix.target == 'windows'
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$').Matches.Groups[1].Value
+          $version = $version.Split('+')[0]
+          $out = "space_weather-$version-windows-x64"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item -Recurse -Force "${{ matrix.artifact_path }}" "dist/$out"
+          Compress-Archive -Path "dist/$out\*" -DestinationPath "dist/$out.zip" -Force
+          "ASSET_NAME=$out.zip" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "ASSET_PATH=dist/$out.zip" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: space_weather-${{ matrix.target }}
+          path: ${{ env.ASSET_PATH }}
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Attach to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ASSET_PATH }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
