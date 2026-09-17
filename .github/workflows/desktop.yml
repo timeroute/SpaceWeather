@@ -43,12 +43,6 @@ jobs:
             artifact_name: macos-arm64
             artifact_path: build/macos/Build/Products/Release/space_weather.app
 
-          - os: macos-15-intel
-            target: macos
-            arch: x86_64
-            artifact_name: macos-x86_64
-            artifact_path: build/macos/Build/Products/Release/space_weather.app
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -96,9 +90,6 @@ jobs:
           case "${{ matrix.arch }}" in
             arm64)
               echo "$ARCHS" | grep -qw arm64
-              ;;
-            x86_64)
-              echo "$ARCHS" | grep -qw x86_64
               ;;
             *)
               echo "Unknown arch ${{ matrix.arch }}" >&2

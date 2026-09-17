@@ -1,58 +1,34 @@
-# space_weather
+# 空间天气（Space Weather）
 
-Space Weather Situational Awareness — Sun-to-Earth chain visualization (Flutter).
+面向「日—地」链路的空间天气态势感知应用：汇总 NOAA SWPC / NASA SDO 等公开数据，把太阳活动、太阳风、地磁场与电离层/极光信息放在同一套界面里查看。
 
-## Getting Started
+## 功能概览
+
+- **首页总览**：太阳活动、太阳风、地磁、电离层四块态势卡片，可跳转专题页
+- **太阳活动**：多波段太阳图像（SDO/AIA、HMI、LASCO），支持放大查看、复制链接与保存原图
+- **太阳风**：速度、密度、动压、IMF 等关键参数与影响评估
+- **地磁场**：Kp / Dst、等级标尺与短期预报
+- **电离层与极光**：TEC、闪烁等级、极光椭圆等（部分指标由地磁状态推导）
+
+数据按固定间隔自动刷新，也可手动刷新。
+
+## 数据来源
+
+- [NOAA Space Weather Prediction Center](https://www.swpc.noaa.gov/)（太阳风、地磁、X 射线、活动区等）
+- [NASA SDO](https://sdo.gsfc.nasa.gov/)（多波段太阳图像）
+- [NASA DONKI](https://kauai.ccmc.gsfc.nasa.gov/DONKI/)（CME 事件）
+
+## 技术栈
+
+- Flutter / Dart 跨平台桌面与移动端
+- 分层结构：Service → Repository → ViewModel → UI
+- Material 3 浅色 / 深色主题
+
+## 运行
 
 ```bash
 flutter pub get
-flutter run -d linux
+flutter run
 ```
 
-## App icon
-
-Source art: `assets/branding/app_icon.png`
-
-```bash
-dart run flutter_launcher_icons
-```
-
-Config: `flutter_launcher_icons.yaml` (Android / iOS / Web / Windows / macOS).  
-Linux window icon is set in `linux/runner/my_application.cc`.
-
-## CI / Desktop builds (GitHub Actions)
-
-Workflow: [`.github/workflows/desktop.yml`](.github/workflows/desktop.yml)
-
-| Trigger | Behavior |
-|---------|----------|
-| Push / PR to `main` | Matrix build → **Actions Artifacts**（不在 Release 页） |
-| Push tag `v*` | Build → **自动创建/更新 Release** 并挂上安装包 |
-| Published Release | Build → 附件挂到该 Release |
-| Manual (`workflow_dispatch`) | 同 push to main |
-
-| Target | Runner | Artifact |
-|--------|--------|----------|
-| Linux x64 | `ubuntu-22.04` | `space_weather-<ver>-linux-x64.tar.gz` |
-| Windows x64 | `windows-latest` | `space_weather-<ver>-windows-x64.zip` |
-| macOS Apple Silicon | `macos-latest` (arm64) | `space_weather-<ver>-macos-arm64.zip` |
-| macOS Intel | `macos-15-intel` (x86_64) | `space_weather-<ver>-macos-x86_64.zip` |
-
-### 如何在 Release 页面看到编译产物
-
-推荐方式（打 tag 自动发布）：
-
-```bash
-git push origin main
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-然后打开 **GitHub → Releases → v1.0.0**。  
-等 Actions 全部变绿后，Release 的 **Assets** 里会出现 4 个平台安装包。
-
-备选：在 GitHub 上 **Releases → Draft a new release → Publish**，Actions 跑完后附件会自动挂上。
-
-> 只 push 到 `main` 时，产物在 **Actions → 某次 run → Artifacts**，不会出现在 Release 页。
-
-> Intel macOS runner 计划随 macOS 15 在 ~2027 退役，新机器优先用 `macos-arm64`。
+选择本机可用的 Linux / Windows / macOS / 移动设备即可。
